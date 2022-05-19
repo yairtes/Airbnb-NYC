@@ -1,0 +1,216 @@
+
+-- Before starting, we decided to calculate only appartments that are available more than 30 days a year
+
+SELECT *
+FROM airbnb
+WHERE availability_365 > 15 and number_of_reviews > 0
+
+
+-- How many appartmaents does each host has?
+-- Creating a temporary table for Continuous use 
+
+DROP TABLE IF EXISTS #temp_NumOfProp_High30
+CREATE TABLE #temp_NumOfProp_High30 (
+host_id varchar(50),
+NumOfProp smallint,
+ReviewAvg smallint
+)
+
+INSERT INTO  #temp_NumOfProp_High30
+SELECT  host_id, COUNT(host_id) AS 'NumOfProp', AVG(number_of_reviews) 'ReviewAvg'
+FROM airbnb
+WHERE availability_365 > 30 
+GROUP BY host_id
+ORDER BY NumOfProp DESC
+
+
+-- For better understanding of the market we classify the appartments by the type of the host
+	-- Hosts that has 1 appartment are "private hosts"
+	-- Hosts that has 2 appartments are "Intermediate hosts"
+	-- Hosts that has between 3-10 appartments are "proffesional hosts"
+	-- Hosts that has more the 10 appartments are "enterprise hosts"
+
+
+SELECT HostType,SUM(NumOfProp) 'NumOfPropSum'
+FROM
+	(SELECT NumOfProp,
+	CASE 
+		WHEN NumOfProp = 1 THEN 'private hosts'
+		WHEN NumOfProp = 2 THEN 'Intermediate hosts'
+		WHEN NumOfProp BETWEEN 3 and 20 THEN 'profesional hosts'
+		WHEN NumOfProp > 20 THEN 'enterprise hosts'
+		END AS HostType
+	FROM #temp_NumOfProp_High30) t 
+GROUP BY HostType
+ORDER BY SUM(NumOfProp) 
+
+-- Now lets see the different appartment types and their prices
+
+SELECT room_type, count(number_of_reviews) 'RoomCount', AVG(price) 'AvgPrice'
+FROM airbnb
+WHERE availability_365 > 15 and number_of_reviews > 0
+GROUP BY room_type
+
+-- Which kind of appartment has the most orders
+-- Because we don't know the number of orders, we will try to get a clue by the number of reviews
+
+SELECT room_type, COUNT(number_of_reviews) 'ReviewCount'
+FROM airbnb
+WHERE number_of_reviews <> 0
+GROUP BY room_type
+
+SELECT HostType, SUM(NumOfProp) 'NumOfPropSum', AVG(ReviewAvg)
+FROM
+	(SELECT NumOfProp, ReviewAvg,
+	CASE 
+		WHEN NumOfProp = 1 THEN 'private hosts'
+		WHEN NumOfProp = 2 THEN 'Intermediate hosts'
+		WHEN NumOfProp BETWEEN 3 and 20 THEN 'profesional hosts'
+		WHEN NumOfProp > 20 THEN 'enterprise hosts'
+		END AS HostType
+	FROM #temp_NumOfProp_High30) t 
+GROUP BY HostType
+ORDER BY SUM(NumOfProp)
+
+-- Prices by Neighborhoods
+SELECT BoroughName, Neighborhood, ROUND(AVG(sale_price),0) 'AvgSalePrice'
+FROM NYC_sales
+GROUP BY BoroughName, Neighborhood
+ORDER BY BoroughName, AvgSalePrice, Neighborhood
+
+--Rent Prices by Neighborhoods
+SELECT neighbourhood_group, neighbourhood, ROUND(AVG(price),0)
+FROM airbnb
+GROUP BY neighbourhood_group, neighbourhood
+ORDER BY neighbourhood_group, AVG(price), neighbourhood
+
+SELECT CAST(room_type AS varchar(50))
+FROM airbnb
+
+
+--------------Location--------------------
+
+SELECT top 5050 *
+FROM airbnb 
+
+-- How many properties are in each neighborhood group
+SELECT neighbourhood_group, COUNT(id) 'PropCount'
+FROM airbnb
+GROUP BY neighbourhood_group
+ORDER BY PropCount DESC
+
+-- How many properties are in each neighborhood 
+
+SELECT neighbourhood_group, neighbourhood, COUNT(id) 'PropCount'
+FROM airbnb
+GROUP BY neighbourhood_group, neighbourhood
+ORDER BY neighbourhood_group
+
+-- What is the property average price, and the estimate order count in each neighbourhood group
+
+SELECT neighbourhood_group, ROUND(AVG(price),0) 'AvgPrice', COUNT(number_of_reviews) 'NumOfReviews'
+FROM airbnb
+WHERE number_of_reviews <> 0
+GROUP BY neighbourhood_group
+ORDER BY AvgPrice DESC
+ 
+-- What is the property average price in each neighbourhood
+
+SELECT neighbourhood_group, neighbourhood, AVG(price) 'AvgPrice', AVG(number_of_reviews) 'NumOfReviews'
+FROM airbnb
+GROUP BY neighbourhood_group, neighbourhood
+ORDER BY neighbourhood_group, AvgPrice
+
+-- The price of each room type orderd by the neighbourhood group
+SELECT room_type, neighbourhood_group, COUNT(room_type)--, ROUND(AVG(price),0) 'AvgPrice'
+FROM airbnb
+GROUP BY  room_type, neighbourhood_group
+ORDER BY room_type, COUNT(room_type) DESC
+
+
+
+-----------------------Price----------------------
+SELECT room_type, ROUND(AVG(price),0) 'AvgPrice', COUNT(number_of_reviews) 'NumOfReviews'
+FROM airbnb
+GROUP BY room_type
+
+SELECT neighbourhood_group, neighbourhood, AVG(price) 'AvgPrice'--, AVG(number_of_reviews) 'NumOfReviews'
+FROM airbnb
+GROUP BY neighbourhood_group, neighbourhood
+ORDER BY AvgPrice 
+
+
+SELECT neighbourhood_group ,ROUND(AVG(price),0) 'AvgPrice', 
+FROM airbnb
+GROUP BY neighbourhood_group
+ORDER BY AVG(price)
+
+
+---
+
+SELECT BoroughName, NEIGHBORHOOD,BUILDING_CLASS_CATEGORY ,SALE_PRICE, AVG(sale_price)
+FROM NYC_sales
+WHERE SALE_PRICE > 75000
+GROUP BY BoroughName, NEIGHBORHOOD,BUILDING_CLASS_CATEGORY, SALE_PRICE
+ORDER BY SALE_PRICE
+
+SELECT 
+
+SELECT top 5 *
+FROM NYC_sales
+
+
+Select id, number_of_reviews, last_review, availability_365
+FROM airbnb
+WHERE number_of_reviews = 0 and availability_365 = 0
+
+
+Select price, number_of_reviews 
+FROM airbnb
+WHERE number_of_reviews <> 0 
+ORDER BY price
+
+SELECT latitude, longitude, price
+FROM airbnb
+
+-- Availability Vs number of reviews
+
+SELECT availability, SUM(number_of_reviews) 'number of reviews'
+FROM
+(SELECT availability_365, SUM(number_of_reviews) 'number of reviews',
+    CASE 
+    WHEN availability_365 BETWEEN 1 and 50 THEN '1-50'
+    WHEN availability_365 BETWEEN 51 and 150 THEN '51-150'
+    WHEN availability_365 BETWEEN 151 and 250 THEN '151-250'
+    WHEN availability_365 BETWEEN 251 and 356 THEN '251-365'
+    END as 'availability'
+FROM airbnb
+WHERE availability_365 > 0
+GROUP BY availability_365)t1
+JOIN airbnb t2
+    ON t1.availability_365 = t2.availability_365
+    GROUP BY availability
+
+SELECT *
+from airbnb
+
+
+availability_365,SUM(number_of_reviews) 'number of reviews'
+
+
+SELECT [minimum nights], SUM(number_of_reviews) 'number of reviews'
+FROM
+(SELECT minimum_nights, SUM(number_of_reviews) 'number of reviews',
+CASE 
+    WHEN minimum_nights = 1  THEN '1'
+    WHEN minimum_nights = 2  THEN '2'
+    WHEN minimum_nights = 3  THEN '32'
+    WHEN minimum_nights BETWEEN 4 and 7 THEN '4-7'
+    WHEN minimum_nights > 7 THEN 'more than 7'
+    END as 'minimum nights'
+FROM airbnb
+WHERE availability_365 > 0
+GROUP BY minimum_nights)t1
+  JOIN airbnb t2
+  ON t1.minimum_nights = t2.minimum_nights
+  GROUP BY [minimum nights]
